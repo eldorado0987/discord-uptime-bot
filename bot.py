@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands, tasks
 import requests
 import re
+from requests.exceptions import ConnectionError
+
 
 # Your bot token
 TOKEN = ''
@@ -17,11 +19,15 @@ def check_server(url):
         response = requests.get(url)
         # Check specific status codes
         if response.status_code == 200 or 403:
-            return 'Server is up!', discord.Color.green()
+            return '**Server is up!**', discord.Color.green()
         else:
-            return f'Server returned status code {response.status_code}', discord.Color.orange()
-    except requests.ConnectionError:
-        return 'Server is down!', discord.Color.red()
+            return f'**Server returned status code {response.status_code}**', discord.Color.orange()
+    except ConnectionError as e:
+        if "WinError 10061" in str(e):
+            return '**Server is up!**', discord.Color.green()
+        else:
+            print("에러 메시지:", e)
+            return f'**Server is down!**\nError: {e}', discord.Color.red()
 
 # Dictionary to keep track of tasks
 monitor_tasks = {}
@@ -49,7 +55,7 @@ async def update_status(channel_id, url):  # Add channel_id as a parameter
     bar_tasks[channel_id] = bar
     bar_str = ''.join(bar)
     message =f"```ansi\n{bar_str[:-1]}\n```"
-    embed = discord.Embed(title="Server Status", description=f'{message}\n**{status_message}**', color=color)
+    embed = discord.Embed(title="Server Status", description=f'{message}\n{status_message}', color=color)
     message, task = monitor_tasks[channel_id]
     await message.edit(embed=embed)
 
@@ -63,7 +69,10 @@ async def ping(interaction: discord.Interaction, url: str):
         await interaction.response.send_message("Already monitoring in this channel. Please stop the previous monitor first.", ephemeral=True)
         return
     
-    url_pattern = re.compile(r'^https?://(?:www\.)?[\w\.\-]+(?:\.\w+)+$')
+    
+    if not url.startswith('http://'):
+        url = 'https://' + url
+    url_pattern = re.compile(r'^.*$')
     if not url_pattern.match(url):
         await interaction.response.send_message("This is not a valid URL format.", ephemeral=True)
         return
@@ -74,11 +83,10 @@ async def ping(interaction: discord.Interaction, url: str):
     bar_tasks[interaction.channel_id] = bar
     bar_str = ''.join(bar)
     message =f"```ansi\n{bar_str[:-1]}\n```"
-    embed = discord.Embed(title="Server Status", description=f'{message}\n**{status_message}**', color=color)
+    embed = discord.Embed(title="Server Status", description=f'{message}\n{status_message}', color=color)
     await interaction.response.send_message(embed=embed)
     message = await interaction.original_response()
 
-    # Create and start the task
     task = create_task(300, update_status, interaction.channel_id, url)
     monitor_tasks[interaction.channel_id] = message, task
     task.start()
