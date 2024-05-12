@@ -37,7 +37,7 @@ bar_tasks = {}
 
 async def create_image(bar):
     # Define image size and bar dimensions
-    image_width = 2000
+    image_width = 1800
     image_height = 250
     bar_width = image_width // (len(bar) * 2 + 1) + 0.85 # Adjusted for spaces
     bar_height = 200
