@@ -96,7 +96,7 @@ async def ping(interaction: discord.Interaction, url: str):
         return
     
     
-    if not url.startswith('http://'):
+    if not url.startswith('http://') and not url.startswith('https://'):
         url = 'https://' + url
     url_pattern = re.compile(r'^.*$')
     if not url_pattern.match(url):
