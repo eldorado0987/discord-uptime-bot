@@ -11,7 +11,7 @@ TOKEN = ''
 # Initialize the bot with the specified intents
 bot = commands.Bot(command_prefix='/', intents=discord.Intents.all())
 
-colors = {'grey': '[1;30m| ', 'red': '[1;31m| ', 'green': '[1;32m| ', 'orange': '[1;33m| '}
+colors = {'grey': '[1;30m| ', 'red': '[1;31m| ', 'green': '[1;36m| ', 'orange': '[1;33m| '}
 
 # Function to check the server status
 def check_server(url):
