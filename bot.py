@@ -115,7 +115,7 @@ async def ping(interaction: discord.Interaction, url: str):
     await interaction.response.send_message(embed=embed, file=file)
     message = await interaction.original_response()
 
-    task = create_task(1, update_status, interaction.channel_id, url)
+    task = create_task(300, update_status, interaction.channel_id, url)
     monitor_tasks[interaction.channel_id] = message, task
     task.start()
 
