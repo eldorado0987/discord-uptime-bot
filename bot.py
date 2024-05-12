@@ -35,7 +35,7 @@ def check_server(url):
 monitor_tasks = {}
 bar_tasks = {}
 
-def create_image(bar):
+async def create_image(bar):
     # Define image size and bar dimensions
     image_width = 2000
     image_height = 250
@@ -77,7 +77,7 @@ async def update_status(channel_id, url):  # Add channel_id as a parameter
     bar.pop(0)
     bar.append(colors[get_bar_color(color)])
     bar_tasks[channel_id] = bar
-    image = create_image(bar)
+    image = await create_image(bar)
     image.save('status_image.png')  # Save the image as a file
     file = discord.File('status_image.png', filename='image.png')
     embed = discord.Embed(title="Server Status", description=f'{status_message}', color=color)
@@ -104,15 +104,9 @@ async def ping(interaction: discord.Interaction, url: str):
         return
 
     # Send an initial message
-    status_message, color = check_server(url)
     bar = [colors['grey']] * 20
     bar_tasks[interaction.channel_id] = bar
-    image = create_image(bar)
-    image.save('status_image.png')  # Save the image as a file
-    file = discord.File('status_image.png', filename='image.png')
-    embed = discord.Embed(title="Server Status", description=f'{status_message}', color=color)
-    embed.set_image(url='attachment://image.png')  # Set the image as an attachment in the embed
-    await interaction.response.send_message(embed=embed, file=file)
+    await interaction.response.defer()
     message = await interaction.original_response()
 
     task = create_task(300, update_status, interaction.channel_id, url)
