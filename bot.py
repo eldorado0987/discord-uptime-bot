@@ -4,6 +4,8 @@ import requests
 import re
 from requests.exceptions import ConnectionError
 from PIL import Image, ImageDraw
+import time
+import os
 
 
 # Your bot token
@@ -62,6 +64,8 @@ def create_task(loop_time, function, *args):
     async def task():
         await function(*args)
     return task
+
+
 def get_bar_color(color):
     if color == discord.Color.green():
         return 'green'
@@ -69,6 +73,7 @@ def get_bar_color(color):
         return 'orange'
     elif color == discord.Color.red():
         return 'red'
+
 
 async def update_status(channel_id, url):  # Add channel_id as a parameter
     global bar_tasks
@@ -78,12 +83,24 @@ async def update_status(channel_id, url):  # Add channel_id as a parameter
     bar.append(colors[get_bar_color(color)])
     bar_tasks[channel_id] = bar
     image = await create_image(bar)
-    image.save('status_image.png')  # Save the image as a file
-    file = discord.File('status_image.png', filename='image.png')
+    image.save(f'status_image_{channel_id}.png')  # Save the image as a file
+    file = discord.File(f'status_image_{channel_id}.png', filename=f'image_{channel_id}.png')
     embed = discord.Embed(title="Server Status", description=f'{status_message}', color=color)
-    embed.set_image(url='attachment://image.png')  # Set the image as an attachment in the embed
-    message, _ = monitor_tasks[channel_id]  # Remove the 'task' variable
-    await message.edit(embed=embed, attachments=[file])  # Await the message.edit() method call
+    embed.set_image(url=f'attachment://image_{channel_id}.png')  # Set the image as an attachment in the embed
+    unix_timestamp = int(time.time())
+    embed.set_footer(text=f'Last updated at <t:{unix_timestamp}:R>')
+    channel = discord.utils.get(bot.get_all_channels(), id=channel_id)
+    message_id = monitor_tasks[channel_id][0]
+    message = await channel.fetch_message(message_id)
+    await message.edit(content=None, embed=embed, attachments=[file])  # Await the message.edit() method call
+    
+    # Delete the status image file
+    try:
+        os.remove(f'status_image_{channel_id}.png')
+    except OSError as e:
+        print(f"Error deleting status image file: {e}")
+
+    
 
 # Slash command to start monitoring
 @bot.tree.command(name='ping', description='Monitor a server and check its status every 5 minutes')
@@ -106,11 +123,11 @@ async def ping(interaction: discord.Interaction, url: str):
     # Send an initial message
     bar = [colors['grey']] * 20
     bar_tasks[interaction.channel_id] = bar
-    await interaction.response.defer()
+    await interaction.response.send_message("Starting monitoring...")
     message = await interaction.original_response()
 
     task = create_task(300, update_status, interaction.channel_id, url)
-    monitor_tasks[interaction.channel_id] = message, task
+    monitor_tasks[interaction.channel_id] = message.id, task
     task.start()
 
 # Function to stop monitoring
@@ -120,7 +137,9 @@ async def stop(interaction: discord.Interaction):
 
     # Stop the task if it exists and delete the message
     if interaction.channel_id in monitor_tasks:
-        message, task = monitor_tasks[interaction.channel_id]
+        message_id, task = monitor_tasks[interaction.channel_id]
+        channel = discord.utils.get(bot.get_all_channels(), id=interaction.channel_id)
+        message = await channel.fetch_message(message_id)
         task.cancel()
         try:
             await message.delete()
