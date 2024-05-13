@@ -85,10 +85,9 @@ async def update_status(channel_id, url):  # Add channel_id as a parameter
     image = await create_image(bar)
     image.save(f'status_image_{channel_id}.png')  # Save the image as a file
     file = discord.File(f'status_image_{channel_id}.png', filename=f'image_{channel_id}.png')
-    embed = discord.Embed(title="Server Status", description=f'{status_message}', color=color)
-    embed.set_image(url=f'attachment://image_{channel_id}.png')  # Set the image as an attachment in the embed
     unix_timestamp = int(time.time())
-    embed.set_footer(text=f'Last updated at <t:{unix_timestamp}:R>')
+    embed = discord.Embed(title="Server Status", description=f'{status_message}\nLast updated at <t:{unix_timestamp}:R>', color=color)
+    embed.set_image(url=f'attachment://image_{channel_id}.png')  # Set the image as an attachment in the embed
     channel = discord.utils.get(bot.get_all_channels(), id=channel_id)
     message_id = monitor_tasks[channel_id][0]
     message = await channel.fetch_message(message_id)
